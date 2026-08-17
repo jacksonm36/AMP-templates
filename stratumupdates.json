@@ -1,0 +1,32 @@
+[
+    {
+        "UpdateStageName": "Server Directory Creation",
+        "UpdateSourcePlatform": "All",
+        "UpdateSource": "CreateDirectory",
+        "UpdateSourceArgs": "{{$FullBaseDir}}server",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": "Data Directory Creation",
+        "UpdateSourcePlatform": "All",
+        "UpdateSource": "CreateDirectory",
+        "UpdateSourceArgs": "{{$FullBaseDir}}data",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": "Stratum Download",
+        "UpdateSourcePlatform": "Linux",
+        "UpdateSource": "Executable",
+        "UpdateSourceData": "/bin/bash",
+        "UpdateSourceArgs": "-c \"set -euo pipefail; BASE='{{$FullBaseDir}}'; TAG='{{StratumVersion}}'; mkdir -p \\\"$BASE/server\\\" \\\"$BASE/data\\\"; cd \\\"$BASE\\\"; if [[ -z \\\"$TAG\\\" ]]; then TAG=$(python3 -c 'import json,urllib.request; r=urllib.request.Request(\\\"https://api.github.com/repos/StratumServer/Stratum/releases/latest\\\", headers={\\\"User-Agent\\\":\\\"AMP-Stratum\\\"}); print(json.load(urllib.request.urlopen(r, timeout=30))[\\\"tag_name\\\"])'); fi; VER=\\\"${TAG#v}\\\"; ASSET=\\\"stratum-${VER}-linux-x64.zip\\\"; URL=\\\"https://github.com/StratumServer/Stratum/releases/download/${TAG}/${ASSET}\\\"; echo \\\"Downloading $URL\\\"; wget -qO stratum.zip \\\"$URL\\\" || { echo \\\"Stratum download failed. Check Stratum Release tag and GitHub.\\\"; exit 1; }; unzip -o stratum.zip -d server >/dev/null; rm -f stratum.zip; chmod +x server/StratumServer; echo \\\"Stratum $TAG installed\\\"\"",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": "Stratum Download",
+        "UpdateSourcePlatform": "Windows",
+        "UpdateSource": "Executable",
+        "UpdateSourceData": "powershell.exe",
+        "UpdateSourceArgs": "-NoProfile -Command \"$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $Base='{{$FullBaseDir}}'; $Tag='{{StratumVersion}}'; New-Item -ItemType Directory -Force -Path (Join-Path $Base 'server'), (Join-Path $Base 'data') | Out-Null; Set-Location $Base; if ([string]::IsNullOrWhiteSpace($Tag)) { $Tag = (Invoke-RestMethod -UseBasicParsing -Uri 'https://api.github.com/repos/StratumServer/Stratum/releases/latest').tag_name }; $Ver = $Tag.TrimStart('v'); $Asset = \\\"stratum-$Ver-win-x64.zip\\\"; $Url = \\\"https://github.com/StratumServer/Stratum/releases/download/$Tag/$Asset\\\"; Write-Output \\\"Downloading $Url\\\"; try { Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile 'stratum.zip' -ErrorAction Stop } catch { Write-Output 'Stratum download failed. Check Stratum Release tag and GitHub.'; exit 1 }; Expand-Archive -Path 'stratum.zip' -DestinationPath 'server' -Force; Remove-Item 'stratum.zip' -Force -ErrorAction SilentlyContinue; Write-Output \\\"Stratum $Tag installed\\\"\"",
+        "SkipOnFailure": false
+    }
+]

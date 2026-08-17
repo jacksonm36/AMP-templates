@@ -140,5 +140,36 @@
         "DefaultValue": "",
         "Placeholder": "v1.22.6-stratum.2",
         "EnumValues": {}
+    },
+    {
+        "DisplayName": "Dotnet Release Stream",
+        "Category": "Updates",
+        "Subcategory": "Server Updates:build:-1",
+        "Description": "Sets the .NET release stream used to install the SDK. Stratum 1.22.x needs 10.0. Update the server after changing this.",
+        "Keywords": "dotnet,release,stream",
+        "FieldName": "DotnetRelease",
+        "InputType": "enum",
+        "ParamFieldName": "DotnetRelease",
+        "IncludeInCommandLine": false,
+        "DefaultValue": "10.0",
+        "EnumValues": {
+            "10.0": "10.0 (default)",
+            "8.0": "8.0"
+        }
+    },
+    {
+        "DisplayName": "Dotnet Version",
+        "Category": "Updates",
+        "Subcategory": "Server Updates:build:-1",
+        "Description": "Specific .NET SDK version. Empty = latest for the selected Dotnet Release Stream. Update the server after changing this.",
+        "Keywords": "dotnet,version",
+        "FieldName": "DotnetSDKVersion",
+        "InputType": "text",
+        "IsFlagArgument": false,
+        "ParamFieldName": "DotnetSDKVersion",
+        "IncludeInCommandLine": false,
+        "DefaultValue": "",
+        "Placeholder": "10.0.400",
+        "EnumValues": {}
     }
 ]

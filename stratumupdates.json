@@ -14,6 +14,30 @@
         "SkipOnFailure": false
     },
     {
+        "UpdateStageName": "Dotnet Directory Creation",
+        "UpdateSourcePlatform": "All",
+        "UpdateSource": "CreateDirectory",
+        "UpdateSourceArgs": "{{$FullBaseDir}}dotnet",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": ".NET SDK Download",
+        "UpdateSourcePlatform": "Linux",
+        "UpdateSourceArch": "x86_64",
+        "UpdateSource": "Executable",
+        "UpdateSourceData": "/bin/bash",
+        "UpdateSourceArgs": "-c \"DotnetVersion=\\\"{{DotnetSDKVersion}}\\\"; cd \\\"{{$FullBaseDir}}\\\" && if [[ -x dotnet/dotnet ]]; then InstalledVersion=$(dotnet/dotnet --version | xargs); else InstalledVersion=\\\"\\\"; fi; if [[ -z \\\"$DotnetVersion\\\" ]]; then DotnetVersion=$(wget -qO- https://builds.dotnet.microsoft.com/dotnet/release-metadata/{{DotnetRelease}}/releases.json | jq -r \\\".[\\\\\\\"latest-sdk\\\\\\\"]\\\"); fi; if [[ ! \\\"$DotnetVersion\\\" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+$ ]]; then echo \\\"Invalid .NET SDK version format specified\\\" && exit 1; elif [[ \\\"$InstalledVersion\\\" == \\\"$DotnetVersion\\\" ]]; then echo \\\".NET SDK v$DotnetVersion already installed. Skipping\\\" && exit 0; else [[ -f dotnet.tar.gz ]] && rm -f dotnet.tar.gz >/dev/null 2>&1; wget -qO dotnet.tar.gz https://builds.dotnet.microsoft.com/dotnet/Sdk/$DotnetVersion/dotnet-sdk-$DotnetVersion-linux-x64.tar.gz || { echo \\\"Download failed from the Microsoft CDN. This is a fault with the CDN, not AMP. Aborting\\\"; exit 1; }; rm -rf dotnet/* >/dev/null 2>&1 && tar -xzf dotnet.tar.gz -C dotnet >/dev/null 2>&1 && rm -f dotnet.tar.gz >/dev/null 2>&1 && echo \\\".NET SDK v$DotnetVersion downloaded\\\"; fi\"",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": ".NET SDK Download",
+        "UpdateSourcePlatform": "Windows",
+        "UpdateSource": "Executable",
+        "UpdateSourceData": "powershell.exe",
+        "UpdateSourceArgs": "-NoProfile -Command \"$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $DotnetVersion='{{DotnetSDKVersion}}'; Set-Location -Path '{{$FullBaseDir}}'; if (Test-Path 'dotnet/dotnet.exe') { $InstalledVersion = (& dotnet/dotnet.exe --version).Trim() } else { $InstalledVersion = '' }; if ( [string]::IsNullOrWhiteSpace($DotnetVersion) ) { $DotnetVersion=(Invoke-RestMethod -UseBasicParsing -Uri https://builds.dotnet.microsoft.com/dotnet/release-metadata/{{DotnetRelease}}/releases.json).\\\"latest-sdk\\\" }; if ($DotnetVersion -notmatch '^\\d+\\.\\d+\\.\\d+$') { Write-Output \\\"Invalid .NET SDK version format specified\\\"; exit 1 } elseif ( $InstalledVersion -eq $DotnetVersion ) { Write-Output \\\".NET SDK v$DotnetVersion already installed. Skipping\\\"; exit 0 } else { if ( Test-Path dotnet.zip ) { Remove-Item dotnet.zip -Force -ErrorAction SilentlyContinue *> $null }; try { Invoke-WebRequest -UseBasicParsing -Uri https://builds.dotnet.microsoft.com/dotnet/Sdk/$DotnetVersion/dotnet-sdk-$DotnetVersion-win-x64.zip -OutFile dotnet.zip -ErrorAction Stop } catch { Write-Output \\\"Download failed from the Microsoft CDN. This is a fault with the CDN, not AMP. Aborting\\\"; exit 1; }; Remove-Item -Path 'dotnet/*' -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive -Path \\\"dotnet.zip\\\" -DestinationPath \\\"dotnet\\\" -Force *> $null; if ( Test-Path dotnet.zip ) { Remove-Item dotnet.zip -Force -ErrorAction SilentlyContinue *> $null }; Write-Output \\\".NET SDK v$DotnetVersion downloaded\\\" }\"",
+        "SkipOnFailure": false
+    },
+    {
         "UpdateStageName": "Stratum Download",
         "UpdateSourcePlatform": "Linux",
         "UpdateSource": "Executable",
@@ -27,6 +51,22 @@
         "UpdateSource": "Executable",
         "UpdateSourceData": "powershell.exe",
         "UpdateSourceArgs": "-NoProfile -Command \"$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $Base='{{$FullBaseDir}}'; $Tag='{{StratumVersion}}'; New-Item -ItemType Directory -Force -Path (Join-Path $Base 'server'), (Join-Path $Base 'data') | Out-Null; Set-Location $Base; if ([string]::IsNullOrWhiteSpace($Tag)) { $Tag = (Invoke-RestMethod -UseBasicParsing -Uri 'https://api.github.com/repos/StratumServer/Stratum/releases/latest').tag_name }; $Ver = $Tag.TrimStart('v'); $Asset = \\\"stratum-$Ver-win-x64.zip\\\"; $Url = \\\"https://github.com/StratumServer/Stratum/releases/download/$Tag/$Asset\\\"; Write-Output \\\"Downloading $Url\\\"; try { Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile 'stratum.zip' -ErrorAction Stop } catch { Write-Output 'Stratum download failed. Check Stratum Release tag and GitHub.'; exit 1 }; Expand-Archive -Path 'stratum.zip' -DestinationPath 'server' -Force; Remove-Item 'stratum.zip' -Force -ErrorAction SilentlyContinue; Write-Output \\\"Stratum $Tag installed\\\"\"",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": "Stratum Prepare (official VS + patches)",
+        "UpdateSourcePlatform": "Linux",
+        "UpdateSource": "Executable",
+        "UpdateSourceData": "/bin/bash",
+        "UpdateSourceArgs": "-c \"export DOTNET_ROOT=\\\"{{$FullRootDir}}dotnet\\\"; export PATH=\\\"{{$FullRootDir}}dotnet:$PATH\\\"; cd \\\"{{$FullBaseDir}}server\\\" || exit 1; chmod +x StratumServer; ./StratumServer --stratum-prepare-only --dataPath ../data\"",
+        "SkipOnFailure": false
+    },
+    {
+        "UpdateStageName": "Stratum Prepare (official VS + patches)",
+        "UpdateSourcePlatform": "Windows",
+        "UpdateSource": "Executable",
+        "UpdateSourceData": "powershell.exe",
+        "UpdateSourceArgs": "-NoProfile -Command \"$env:DOTNET_ROOT='{{$FullRootDir}}dotnet'; $env:PATH = $env:DOTNET_ROOT + ';' + $env:PATH; Set-Location -Path '{{$FullBaseDir}}server'; & .\\StratumServer.exe --stratum-prepare-only --dataPath ../data; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\"",
         "SkipOnFailure": false
     }
 ]
